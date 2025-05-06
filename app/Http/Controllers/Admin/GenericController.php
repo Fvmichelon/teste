@@ -6,8 +6,6 @@ use App\Models\AppearanceModel;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile as HttpUploadedFile;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 
 abstract class GenericController extends Controller
 {
@@ -567,21 +565,12 @@ abstract class GenericController extends Controller
 
     private function validator($request, &$validators, &$model, $input)
     {
-        // Debug
-        if (isset($input['input']) && ($input['input'] == 'image' || $input['input'] == 'file')) {
-            Log::info('File input data:', [
-                'name' => $input['name'],
-                'translate' => $input['translate'] ?? false,
-                'request_data' => $request->all()
-            ]);
-        }
-
-        $languages = config('app.locales', ['pt', 'en']);
+        $languages = [];
 
         if (isset($input['validators'])) {
             if (isset($input['translate']) && $input['translate']) {
                 foreach ($languages as $lang) {
-                    $validators[$input['name']][$lang] = $input['validators'];
+                    $validators[$input['name']][$lang['slug']] = $input['validators'];
                 }
             } else {
                 $validators[$input['name']] = $input['validators'];
@@ -590,48 +579,14 @@ abstract class GenericController extends Controller
 
         if (isset($input['input']) && ($input['input'] == 'image' || $input['input'] == 'file')) {
             if (isset($input['translate']) && $input['translate']) {
-                // Handle file removal for each language
+                $file = $request->file($input['name']);
                 foreach ($languages as $lang) {
-                    $removeFlag = $request->input($input['name'] . '.' . $lang . '_remove');
-                    if ($removeFlag == '1') {
-                        // Get current file path for this specific language
-                        $currentFile = $model->getTranslation($input['name'], $lang);
-                        if ($currentFile) {
-                            // Delete file from storage
-                            Storage::disk('storage')->delete($currentFile);
-                            // Clear translation for this specific language only
-                            $model->setTranslation($input['name'], $lang, null);
-                        }
-                    }
-                }
-
-                // Handle new file uploads
-                $files = $request->file($input['name']);
-                if (is_array($files)) {
-                    foreach ($languages as $lang) {
-                        if (isset($files[$lang])) {
-                            $name = $files[$lang]->storeAs($input['folder'] ?? '', $this->generateFileName($files[$lang]), 'storage');
-                            $model->setTranslation($input['name'], $lang, $name);
-                        }
+                    if (isset($file[$lang['slug']])) {
+                        $name = $file[$lang['slug']]->storeAs($input['folder'] ?? '', $this->generateFileName($file[$lang['slug']]), 'storage');
+                        $model->setTranslation($input['name'], $lang['slug'], $name);
                     }
                 }
             } else {
-                // Check for remove flag
-                $removeFlag = $request->input($input['name'] . '_remove');
-                if ($removeFlag == '1') {
-                    // Get current file path
-                    $currentFile = $model->{$input['name']};
-                    if ($currentFile) {
-                        // Delete file from storage
-                        Storage::disk('storage')->delete($currentFile);
-                        // Clear field
-                        $model->fill([
-                            $input['name'] => null
-                        ]);
-                    }
-                }
-
-                // Handle new file upload
                 $file = $request->file($input['name']);
                 if ($file) {
                     $name = $file->storeAs($input['folder'] ?? '', $this->generateFileName($file), 'storage');

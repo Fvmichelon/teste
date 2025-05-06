@@ -2,10 +2,10 @@
 
 @section("content")
 
-    @include("site.sections.header")
+    {{-- @include("site.sections.header") --}}
 
     @yield("content")
 
-    @include("site.sections.footer")
+    {{-- @include("site.sections.footer") --}}
 
 @overwrite
