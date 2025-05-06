@@ -1734,7 +1734,7 @@
             @include ('site.components.news-and-articles')
 
 
-           @include ('site.components.we-care')
+            @include ('site.components.we-care')
 
             @include ('site.components.maps-google')
 
